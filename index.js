@@ -61,7 +61,7 @@ client.on(Events.MessageCreate, async message => {
     });
 
     connection.on(VoiceConnectionStatus.Ready, () => {
-      message.reply(`Joined **${channel.name}**! Say "${WAKE_WORDS[0]}" to wake me up.`);
+      message.reply(`Joined **${channel.name}**!  Say "${WAKE_WORDS[0]}" to wake me up.  Also, you can say "${WAKE_WORDS[0]}, play song ___" to play music.`);
       startListening(connection, message.channel);
 
       // Subscribe to users already in the channel at join time
@@ -286,9 +286,8 @@ async function playSound(filePath, connection) {
 }
 
 function extractSmakbotCommand(query) {
-  const match = query.match(/smak[\s]?bot[,.]?\s*play[,.]?\s*(.+)/i)
-             || query.match(/smack[\s]?bot[,.]?\s*play[,.]?\s*(.+)/i) || query.match(/smack[\s]?bop[,.]?\s*play[,.]?\s*(.+)/i);
-  console.log(`Smakbot regex test on: "${query}" → match: ${match ? match[1] : 'null'}`);
+  const match = query.match(/play(?:\s+the)?\s+song[,.]?\s*(.+)/i);
+  console.log(`play song regex test on: "${query}" → match: ${match ? match[1] : 'null'}`);
   if (match) {
     return match[1].trim().replace(/[,.]+$/, '');
   }
@@ -300,8 +299,8 @@ async function handleQuery(query, connection, channel) {
   const songRequest = extractSmakbotCommand(query);
   if (songRequest) {
     console.log(`Smakbot command: !play ${songRequest}`);
-    await channel.send(`!play ${songRequest}`).catch(err => console.error('Failed to send smakbot command:', err.message));
-    await queuePlayback(() => speakResponse(`Okay, asking smakbot to play ${songRequest}.`, connection));
+    await channel.send(`!play ${songRequest}`).catch(err => console.error('Failed to send play music command:', err.message));
+    await queuePlayback(() => speakResponse(`Okay, playing ${songRequest}.`, connection));
     return;
   }
 
