@@ -23,7 +23,7 @@ Luna is a locally-hosted AI voice assistant for Discord. She listens for her wak
 - [whisper-cli](https://github.com/ggerganov/whisper.cpp) (`brew install whisper-cpp` on Mac)
 - [espeak-ng](https://github.com/espeak-ng/espeak-ng) (`brew install espeak-ng` on Mac)
 - A Discord bot token
-- A [Tavily](https://tavily.com) API key (free tier, for web search)
+- OPTIONAL, BUT RECOMMENDED (modify index.js as needed if you don't want web search):  A [Tavily](https://tavily.com) API key (free tier, for web search)
 
 ---
 
