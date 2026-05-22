@@ -269,11 +269,11 @@ Make sure the bot has **Connect** and **Speak** permissions in your Discord serv
 
 ## Advanced — Red-DiscordBot Music Integration (VoiceBridge)
 
-If you run [Red-DiscordBot](https://github.com/Cog-Creators/Red-DiscordBot) with the Audio cog in the same server, you can give Luna the ability to control music playback by saying *"Luna, smakbot play [song name]"*.
+If you run [Red-DiscordBot](https://github.com/Cog-Creators/Red-DiscordBot) with the Audio cog in the same server, you can give Luna the ability to control music playback by saying *"Luna, play song [song name]"*.
 
 ### How it works
 
-Luna detects the phrase "smakbot play" in a query, extracts the song name, and posts `!play <song>` to the text channel. Because Discord bots ignore messages from other bots by default, a small Red cog called **VoiceBridge** is needed to bridge the gap — it whitelists Luna's user ID and relays the command to Red's Audio cog.
+Luna detects the phrase "play song" in a query, extracts the song name, and posts `!play <song>` to the text channel. Because Discord bots ignore messages from other bots by default, a small Red cog called **VoiceBridge** is needed to bridge the gap — it whitelists Luna's user ID and relays the command to Red's Audio cog.
 
 ### Setup
 
@@ -305,11 +305,11 @@ AI_BOT_ID = 123456789012345678  # Luna's Discord user ID
 
 **5. Usage**
 
-Say: *"Luna, smakbot play Bohemian Rhapsody"*
+Say: *"Luna, play song Bohemian Rhapsody"*
 
 Luna will post `!play Bohemian Rhapsody` to the text channel, VoiceBridge will intercept it and invoke Red's Audio cog, and music will start playing.
 
-> The trigger phrase is flexible — Whisper may transcribe "smakbot" as "smack bot", "smack bop", etc. These variants are all handled by the regex in `index.js`.
+> The trigger phrase is somewhat flexible — variants are mostly handled by the regex in `index.js`.
 
 ---
 
