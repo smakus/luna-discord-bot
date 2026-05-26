@@ -62,6 +62,8 @@ client.on(Events.MessageCreate, async message => {
 
     connection.on(VoiceConnectionStatus.Ready, () => {
       message.reply(`Joined **${channel.name}**!  Say "${WAKE_WORDS[0]}" to wake me up.  Also, you can say "${WAKE_WORDS[0]}, play song ___" to play music.`);
+      activeConnection = connection;
+      activeVoiceChannel = channel;
       startListening(connection, message.channel);
 
       // Subscribe to users already in the channel at join time
@@ -79,6 +81,16 @@ client.on(Events.MessageCreate, async message => {
 // ─── Core listening loop ──────────────────────────────────────────────────────
 
 const listeningUsers = new Set();
+
+// ─── Empty channel disconnect ─────────────────────────────────────────────────
+
+let activeConnection = null;
+let activeVoiceChannel = null;
+
+function getRealMemberCount(voiceChannel) {
+  if (!voiceChannel) return 0;
+  return voiceChannel.members.filter(m => !m.user.bot && !IGNORED_USERS.has(m.id)).size;
+}
 
 function startListening(connection, channel) {
   connection.receiver.speaking.on('start', (userId) => {
@@ -443,4 +455,16 @@ async function convertTextToSpeech(text) {
 }
 
 client.on(Events.Error, console.warn);
+
+// Disconnect when the last real user (non-bot, non-ignored) leaves
+client.on(Events.VoiceStateUpdate, (oldState, _newState) => {
+  if (!activeVoiceChannel || oldState.channelId !== activeVoiceChannel.id) return;
+  if (getRealMemberCount(activeVoiceChannel) === 0) {
+    console.log('[voice] Last real user left — disconnecting.');
+    activeConnection.destroy();
+    activeConnection = null;
+    activeVoiceChannel = null;
+    listeningUsers.clear();
+  }
+});
 void client.login(process.env.DISCORD_TOKEN);
