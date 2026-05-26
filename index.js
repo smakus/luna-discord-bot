@@ -50,7 +50,7 @@ client.on(Events.ClientReady, async () => {
 });
 
 client.on(Events.MessageCreate, async message => {
-  if (message.content.toLowerCase() === '!join') {
+  if (message.content.toLowerCase() === '!' + WAKE_WORDS[0]) {
     const channel = message.member.voice.channel;
     if (!channel) return message.reply('You need to join a voice channel first!');
 
