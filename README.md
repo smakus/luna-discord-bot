@@ -197,7 +197,7 @@ Ready! Wake word: luna
 ## Usage
 
 1. Join a Discord voice channel
-2. In any text channel, type `!join`
+2. In any text channel, type `!luna`
 3. Luna will join your voice channel
 4. Say **"Luna"** followed by your question or command
 
