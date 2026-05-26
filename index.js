@@ -16,7 +16,7 @@ const IGNORED_USERS = new Set(
 const WHISPER_CLI = 'whisper-cli';
 const WHISPER_MODEL = '/opt/homebrew/share/whisper-cli/models/ggml-small.en.bin';
 const LM_STUDIO_URL = process.env.LM_STUDIO_URL;
-const LM_SYSTEM_PROMPT = 'You are Luna, a helpful voice assistant in a Discord voice channel. The user will address you by saying "Luna" at the start of their message — ignore this prefix and just respond to the rest. Keep responses concise and conversational — no markdown, no bullet points, no emojis, just natural spoken sentences. Do not ask follow-up questions unless necessary for data.';
+const LM_SYSTEM_PROMPT = 'You are Luna, a helpful voice assistant in a Discord voice channel. The user will address you by saying "Luna" at the start of their message — ignore this prefix and just respond to the rest. Keep responses concise and conversational — no markdown, no bullet points, no emojis, just natural spoken sentences. Do not ask questions after answering unless it is absolutely necessary for data.';
 const KOKORO_URL = process.env.KOKORO_URL;
 const KOKORO_VOICE = process.env.KOKORO_VOICE;
 
@@ -103,7 +103,7 @@ function startListening(connection, channel) {
 }
 
 const SILENCE_MS = 1500;      // ms of silence before utterance is considered done
-const ENERGY_THRESHOLD = 500; // minimum avg sample amplitude to count as speech
+const ENERGY_THRESHOLD = 400; // minimum avg sample amplitude to count as speech
 const MIN_SPEECH_MS = 300;    // ignore utterances shorter than this (noise/clicks)
 
 function hasEnergy(chunk) {
