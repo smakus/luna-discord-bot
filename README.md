@@ -170,7 +170,7 @@ Place a file named `chime.mp3` in the project root. This plays when Luna is acti
 
 ## Running Luna
 
-You need three processes running simultaneously. Open three terminal windows:
+You need three processes running simultaneously. Open three terminal windows (Or two terminal windows, and one app window for LM Studio):
 
 **Terminal 1 — Kokoro TTS server:**
 ```bash
@@ -178,7 +178,7 @@ source ~/kokoro-env312/bin/activate
 python3 kokoro_server.py
 ```
 
-**Terminal 2 — LM Studio:**
+**Terminal 2 (or App window) — LM Studio:**
 Start LM Studio, load your model, and ensure the local server is running (green toggle in the Server tab).
 
 **Terminal 3 — Luna bot:**
