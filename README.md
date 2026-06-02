@@ -267,6 +267,17 @@ Make sure the bot has **Connect** and **Speak** permissions in your Discord serv
 
 ---
 
+## Convenience - Dockerfiles
+
+When you clone the repo, you can find docerfiles in the docerfiles subdirectory for each service if you want to containerize these services via Docker.
+
+For the Kokoro text to speech, go to the dockerfiles subdirectory and create a kokoro-tts docker image:
+
+```bash
+cd kokoro-tts
+docker compose up --build
+```
+
 ## Advanced — Red-DiscordBot Music Integration (VoiceBridge)
 
 If you run [Red-DiscordBot](https://github.com/Cog-Creators/Red-DiscordBot) with the Audio cog in the same server, you can give Luna the ability to control music playback by saying *"Luna, play song [song name]"*.
