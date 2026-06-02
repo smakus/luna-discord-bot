@@ -271,7 +271,7 @@ Make sure the bot has **Connect** and **Speak** permissions in your Discord serv
 
 When you clone the repo, you can find docerfiles in the docerfiles subdirectory for each service if you want to containerize these services via Docker.
 
-For the Kokoro text to speech, go to the dockerfiles subdirectory and create a kokoro-tts docker image:
+For the Kokoro text to speech server, go to the dockerfiles subdirectory and create a kokoro-tts docker image:
 
 ```bash
 cd kokoro-tts
