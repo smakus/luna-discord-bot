@@ -271,10 +271,12 @@ Make sure the bot has **Connect** and **Speak** permissions in your Discord serv
 
 When you clone the repo, you can find docerfiles in the docerfiles subdirectory for each service if you want to containerize these services via Docker.
 
-For the Kokoro text to speech server, go to the dockerfiles subdirectory and create a kokoro-tts docker image:
+For the Kokoro text to speech server, go to the dockerfiles subdirectory and create a kokoro-tts docker image.
 
+Or to run Luna and Kokoro together as one Docker Compose group, just run the same command from the root directory that contains `docker-compose.yml` and both the Kokoro and Luna subdirectories.
+
+From Root directory that contains docker-compose.yml:
 ```bash
-cd kokoro-tts
 docker compose up --build
 ```
 
