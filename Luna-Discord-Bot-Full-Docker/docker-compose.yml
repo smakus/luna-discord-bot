@@ -1,0 +1,25 @@
+version: "3.9"
+
+services:
+  kokoro:
+    build:
+      context: ./Kokoro
+    restart: unless-stopped
+    ports:
+      - "8880:8880"
+
+  luna:
+    build:
+      context: ./Luna
+    restart: unless-stopped
+    depends_on:
+      - kokoro
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    env_file:
+      - ./Luna/.env
+    environment:
+      - LM_STUDIO_URL=http://host.docker.internal:1234/api/v1/chat
+      - KOKORO_URL=http://kokoro:8880/v1/audio/speech
+      - WHISPER_CLI=/whisper/build/bin/whisper-cli
+      - WHISPER_MODEL=/opt/whisper/models/ggml-small.en.bin
