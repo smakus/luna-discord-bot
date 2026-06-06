@@ -17,9 +17,10 @@ Luna is a locally-hosted AI voice assistant for Discord. She listens for her wak
 ## Requirements
 
 - macOS or Linux
+- Docker for convenient install and running, otherwise:
 - Node.js 18+
 - Python 3.12 (exactly — Kokoro requires `<3.13`)
-- [LM Studio](https://lmstudio.ai) with a loaded model
+- [LM Studio](https://lmstudio.ai) with a loaded model (required no matter what method of install you do)
 - [whisper-cli](https://github.com/ggerganov/whisper.cpp) (`brew install whisper-cpp` on Mac)
 - [espeak-ng](https://github.com/espeak-ng/espeak-ng) (`brew install espeak-ng` on Mac)
 - A Discord bot token
@@ -27,7 +28,7 @@ Luna is a locally-hosted AI voice assistant for Discord. She listens for her wak
 
 ---
 
-## Installation
+## Installation (for Docker install, see Convenience section)
 
 ### 1. Clone the repo
 
@@ -36,7 +37,7 @@ git clone https://github.com/yourname/luna-discord-bot
 cd luna-discord-bot
 ```
 
-### 2. Install Node dependencies
+### 2. Install Node dependencies (non-Docker only)
 
 ```bash
 npm install
@@ -60,7 +61,7 @@ npm install @discordjs/opus sodium-native
 
 > **Linux only:** you may also need `apt install ffmpeg libsodium-dev`
 
-### 3. Install whisper-cli and download a model
+### 3. Install whisper-cli and download a model (non-Docker only)
 
 **macOS:**
 ```bash
@@ -86,7 +87,7 @@ Test that Whisper works:
 whisper-cli -m /opt/homebrew/share/whisper-cli/models/ggml-small.en.bin --help
 ```
 
-### 4. Set up the Kokoro TTS server
+### 4. Set up the Kokoro TTS server (non-Docker only)
 
 Kokoro requires Python 3.12 exactly.
 
@@ -105,7 +106,7 @@ brew install espeak-ng        # macOS
 
 Copy `kokoro_server.py` into your project folder. The first run will automatically download the Kokoro model (~300MB from HuggingFace).
 
-### 5. Set up LM Studio
+### 5. Set up LM Studio (required for all installation methods)
 
 1. Download and install [LM Studio](https://lmstudio.ai)
 2. Download a model — recommended: **Qwen3.5 9B** or similar instruction-tuned model
@@ -113,7 +114,7 @@ Copy `kokoro_server.py` into your project folder. The first run will automatical
 4. Enable authentication in LM Studio settings and copy the bearer token
 5. Enable MCP if you want web search (see `.env` setup below)
 
-### 6. Create a Discord bot
+### 6. Create a Discord bot (required for all installation methods)
 
 1. Go to the [Discord Developer Portal](https://discord.com/developers/applications)
 2. Create a new application and add a bot
@@ -129,7 +130,7 @@ Copy `kokoro_server.py` into your project folder. The first run will automatical
    - Speak
    - Use Voice Activity
 
-### 7. Configure environment variables
+### 7. Configure environment variables (required for all installation methods)
 
 Create a `.env` file in the project root (see example.env file):
 
@@ -168,20 +169,20 @@ Place a file named `chime.mp3` in the project root. This plays when Luna is acti
 
 ---
 
-## Running Luna
+## Running Luna (non-Docker only)
 
 You need three processes running simultaneously. Open three terminal windows (Or two terminal windows, and one app window for LM Studio):
 
-**Terminal 1 — Kokoro TTS server:**
+**Terminal 1 — Kokoro TTS server:** (non-Docker only)
 ```bash
 source ~/kokoro-env312/bin/activate
 python3 kokoro_server.py
 ```
 
-**Terminal 2 (or App window) — LM Studio:**
+**Terminal 2 (or App window) — LM Studio:** (required for all installation methods)
 Start LM Studio, load your model, and ensure the local server is running (green toggle in the Server tab).
 
-**Terminal 3 — Luna bot:**
+**Terminal 3 — Luna bot:** (non-Docker only)
 ```bash
 npm start
 ```
@@ -267,7 +268,7 @@ Make sure the bot has **Connect** and **Speak** permissions in your Discord serv
 
 ---
 
-## Convenience - Dockerfiles
+## Convenience - Docker Installation - Dockerfiles
 
 When you clone the repo, you can find docerfiles in the dockerfiles subdirectory for each service if you want to run containerized these services via Docker.
 
