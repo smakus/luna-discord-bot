@@ -5,7 +5,7 @@ Luna is a locally-hosted AI voice assistant for Discord. She listens for her wak
 
 ## Features
 
-- 🎤 Wake word detection — say "Luna" to activate
+- 🎤 Wake word detection — say "Luna" to activate (configurable)
 - 🧠 Local LLM via LM Studio with conversation memory
 - 🔊 Local TTS via Kokoro (high quality, low latency)
 - 🌐 Optional web search via Tavily MCP
