@@ -17,13 +17,13 @@ Luna is a locally-hosted AI voice assistant for Discord. She listens for her wak
 ## Requirements
 
 - macOS or Linux
+- A Discord bot token
+- [LM Studio](https://lmstudio.ai) with a loaded model (required no matter what method of install you do)
 - Docker for convenient install and running, otherwise:
 - Node.js 18+
 - Python 3.12 (exactly — Kokoro requires `<3.13`)
-- [LM Studio](https://lmstudio.ai) with a loaded model (required no matter what method of install you do)
 - [whisper-cli](https://github.com/ggerganov/whisper.cpp) (`brew install whisper-cpp` on Mac)
 - [espeak-ng](https://github.com/espeak-ng/espeak-ng) (`brew install espeak-ng` on Mac)
-- A Discord bot token
 - OPTIONAL, BUT RECOMMENDED (modify index.js as needed if you don't want web search):  A [Tavily](https://tavily.com) API key (free tier, for web search)
 
 ---
