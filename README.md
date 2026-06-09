@@ -19,16 +19,12 @@ Luna is a locally-hosted AI voice assistant for Discord. She listens for her wak
 - macOS or Linux
 - A Discord bot token
 - [LM Studio](https://lmstudio.ai) with a loaded model (required no matter what method of install you do)
-- Docker for convenient install and running, otherwise:
-- Node.js 18+
-- Python 3.12 (exactly — Kokoro requires `<3.13`)
-- [whisper-cli](https://github.com/ggerganov/whisper.cpp) (`brew install whisper-cpp` on Mac)
-- [espeak-ng](https://github.com/espeak-ng/espeak-ng) (`brew install espeak-ng` on Mac)
+- Docker for convenient install and running
 - OPTIONAL, BUT RECOMMENDED (modify index.js as needed if you don't want web search):  A [Tavily](https://tavily.com) API key (free tier, for web search)
 
 ---
 
-## Installation (for Docker install, see Convenience section)
+## Installation
 
 ### 1. Clone the repo
 
@@ -37,7 +33,7 @@ git clone https://github.com/yourname/luna-discord-bot
 cd luna-discord-bot
 ```
 
-## Convenience - Docker Installation - Dockerfiles
+## Docker Installation - Dockerfiles
 
 When you clone the repo, you can find docerfiles in the dockerfiles subdirectory for each service if you want to run containerized these services via Docker.
 
@@ -50,76 +46,7 @@ From Root directory that contains `docker-compose.yml`:
 docker compose up --build
 ```
 
-### 2. Install Node dependencies (non-Docker only)
-
-```bash
-npm install
-```
-
-The required packages are:
-
-```
-discord.js
-discord-api-types
-@discordjs/voice
-prism-media
-dotenv
-```
-
-You will also need the following native dependencies for `@discordjs/voice` to handle audio encoding:
-
-```bash
-npm install @discordjs/opus sodium-native
-```
-
-> **Linux only:** you may also need `apt install ffmpeg libsodium-dev`
-
-### 3. Install whisper-cli and download a model (non-Docker only)
-
-**macOS:**
-```bash
-brew install whisper-cpp
-mkdir -p /opt/homebrew/share/whisper-cli/models
-curl -L -o /opt/homebrew/share/whisper-cli/models/ggml-small.en.bin \
-  https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-small.en.bin
-```
-
-**Linux:**
-```bash
-# Build from source
-git clone https://github.com/ggerganov/whisper.cpp
-cd whisper.cpp && make
-# Download model
-bash models/download-ggml-model.sh small.en
-```
-
-> Update `WHISPER_MODEL` in `index.js` if your model path differs from the default.
-
-Test that Whisper works:
-```bash
-whisper-cli -m /opt/homebrew/share/whisper-cli/models/ggml-small.en.bin --help
-```
-
-### 4. Set up the Kokoro TTS server (non-Docker only)
-
-Kokoro requires Python 3.12 exactly.
-
-```bash
-# Create a Python 3.12 virtual environment
-python3.12 -m venv ~/kokoro-env312
-source ~/kokoro-env312/bin/activate
-
-# Install dependencies
-pip install "kokoro>=0.9.4" soundfile fastapi uvicorn
-
-# Install espeak-ng (required for text-to-phoneme)
-brew install espeak-ng        # macOS
-# sudo apt install espeak-ng  # Linux
-```
-
-Copy `kokoro_server.py` into your project folder. The first run will automatically download the Kokoro model (~300MB from HuggingFace).
-
-### 5. Set up LM Studio (required for all installation methods)
+### 2. Set up LM Studio (required for all installation methods)
 
 1. Download and install [LM Studio](https://lmstudio.ai)
 2. Download a model — recommended: **Qwen3.5 9B** or similar instruction-tuned model
@@ -127,7 +54,7 @@ Copy `kokoro_server.py` into your project folder. The first run will automatical
 4. Enable authentication in LM Studio settings and copy the bearer token
 5. Enable MCP if you want web search (see `.env` setup below)
 
-### 6. Create a Discord bot (required for all installation methods)
+### 3. Create a Discord bot (required for all installation methods)
 
 1. Go to the [Discord Developer Portal](https://discord.com/developers/applications)
 2. Create a new application and add a bot
@@ -143,9 +70,9 @@ Copy `kokoro_server.py` into your project folder. The first run will automatical
    - Speak
    - Use Voice Activity
 
-### 7. Configure environment variables (required for all installation methods)
+### 4. Configure environment variables
 
-Create a `.env` file in the project root (see example.env file):
+Create a `.env` file in the luna docker subdirectory (see example.env file):
 
 ```env
 # Discord
@@ -176,37 +103,18 @@ IGNORED_USER_IDS=
 | `bf_emma` | British female |
 | `bf_isabella` | British female (formal) |
 
-### 8. Add a chime sound
+### 5. Add a chime sound
 
-Place a file named `chime.mp3` in the project root. This plays when Luna is activated. Any short MP3 will work — keep it under 2 seconds.
+Place a file named `chime.mp3` in the luna docker project root. This plays when Luna is activated. Any short MP3 will work — keep it under 2 seconds.
 
 ---
 
-## Running Luna (non-Docker only)
+## Running Luna
 
-You need three processes running simultaneously. Open three terminal windows (Or two terminal windows, and one app window for LM Studio):
-
-**Terminal 1 — Kokoro TTS server:** (non-Docker only)
-```bash
-source ~/kokoro-env312/bin/activate
-python3 kokoro_server.py
-```
-
-**Terminal 2 (or App window) — LM Studio:** (required for all installation methods)
+**LM Studio:** 
 Start LM Studio, load your model, and ensure the local server is running (green toggle in the Server tab).
 
-**Terminal 3 — Luna bot:** (non-Docker only)
-```bash
-npm start
-```
-
-You should see:
-```
-Using LM Studio model: qwen/qwen3.5-9b
-Ready! Wake word: luna
-```
-
----
+Luna should already be running in Docker, but if not, start the Docker compose group that will run both the Kokoro and Luna Docker images.
 
 ## Usage
 
@@ -219,20 +127,6 @@ Ready! Wake word: luna
 - *"Luna, what's the weather today?"* — triggers web search
 - *"Luna, tell me a joke"* — direct LLM response
 - *"Luna, what did I just ask you?"* — uses conversation memory
-
----
-
-## Project Structure
-
-```
-luna-discord-bot/
-├── index.js          # Main bot (Node.js)
-├── kokoro_server.py  # Local TTS server (Python)
-├── chime.mp3         # Wake word activation sound
-├── .env              # Environment variables (not committed)
-├── package.json
-└── README.md
-```
 
 ---
 
@@ -252,7 +146,7 @@ The following constants at the top of `index.js` can be adjusted:
 ## Troubleshooting
 
 **Luna doesn't respond to the wake word**
-Check the terminal logs — you should see `[userId] Processing Xms utterance...` when you speak. If not, `ENERGY_THRESHOLD` may be too high for your microphone. Try lowering it to `200`.
+Check the terminal logs in Docker — you should see `[userId] Processing Xms utterance...` when you speak. If not, `ENERGY_THRESHOLD` may be too high for your microphone. Try lowering it to `200`.
 
 **Whisper returns empty transcripts**
 Ensure the model file exists at the path set in `WHISPER_MODEL`. Run a manual test:
