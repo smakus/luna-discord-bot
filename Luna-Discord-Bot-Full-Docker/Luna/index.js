@@ -37,13 +37,13 @@ const KOKORO_VOICE = process.env.KOKORO_VOICE;
 
 // ─── Latency tuning ───────────────────────────────────────────────────────────
 // Reduced from 1500ms → 600ms: saves ~900ms on every single interaction.
-const SILENCE_MS       = 600;
-const ENERGY_THRESHOLD = 400;
+const SILENCE_MS       = 1000;
+const ENERGY_THRESHOLD = 300;
 const MIN_SPEECH_MS    = 300;
 
 // Sentence boundary regex — triggers TTS as soon as a sentence is complete
 // rather than waiting for the full LLM response.
-const SENTENCE_END = /([.!?][\s"')\]]*(?:\s|$))/;
+const SENTENCE_END = /(?<!\d)[.!?](?!\d)[\s"')\]]*(?:\s|$)/;
 
 // ─── Discord client ───────────────────────────────────────────────────────────
 
@@ -176,8 +176,6 @@ function continuousCapture(connection, userId, channel) {
 
   decoder.on('data', chunk => {
     lastDataTime = Date.now();
-    // Don't collect audio while we're processing/responding
-    if (processingUsers.has(userId)) return;
 
     if (hasEnergy(chunk)) {
       if (!speaking) {
@@ -195,13 +193,6 @@ function continuousCapture(connection, userId, channel) {
   // Discord stops sending Opus packets when truly silent — track real time elapsed
   // and flush if we've been speaking and no data arrives for SILENCE_MS
   const dataWatchdog = setInterval(() => {
-    if (processingUsers.has(userId)) {
-      // Reset state while this user is being processed
-      speaking     = false;
-      speechChunks = [];
-      lastDataTime = Date.now();
-      return;
-    }
     if (speaking && Date.now() - lastDataTime > SILENCE_MS) {
       flushUtterance();
     }
@@ -225,13 +216,37 @@ function continuousCapture(connection, userId, channel) {
 const processingUsers = new Set(); // tracks who is currently being transcribed/responded to
 
 // ─── Playback queue ───────────────────────────────────────────────────────────
-// Serializes TTS responses so multiple users don't fight over the voice channel
+// Serializes TTS sentences within a single response.
+//
+// Generation counter: every new query increments `currentGeneration`.
+// Each sentence closure captures its generation at queue time. When the
+// closure executes, it compares against `currentGeneration` — if they differ,
+// a newer query has arrived and this sentence is silently skipped.
+// This eliminates the race condition where stale sentences from an old
+// response play alongside a new response.
 
-let playbackQueue = Promise.resolve();
+let playbackQueue     = Promise.resolve();
+let currentPlayer     = null;
+let currentGeneration = 0;  // incremented on every new query
 
-function queuePlayback(fn) {
-  playbackQueue = playbackQueue.then(fn).catch(() => {});
-  return playbackQueue;
+function queuePlayback(fn, generation) {
+  playbackQueue = playbackQueue.then(async () => {
+    if (generation !== currentGeneration) return; // stale — skip
+    await fn();
+  }).catch(() => {});
+}
+
+function interruptPlayback() {
+  // Advance generation — all queued sentences from previous response will
+  // see a mismatch and skip themselves when they eventually execute.
+  currentGeneration++;
+  // Stop the currently playing sentence immediately
+  if (currentPlayer) {
+    try { currentPlayer.stop(true); } catch (_) {}
+    currentPlayer = null;
+  }
+  // Fresh queue for the new response
+  playbackQueue = Promise.resolve();
 }
 
 // ─── WAV helper ───────────────────────────────────────────────────────────────
@@ -283,7 +298,9 @@ function transcribeWithWhisper(wavPath) {
 // ─── Utterance processing ─────────────────────────────────────────────────────
 
 async function processUtterance(pcm, userId, connection, channel) {
-  // Per-user lock — prevents same user from stacking up multiple transcriptions
+  // Per-user whisper lock — prevents stacking multiple simultaneous transcriptions
+  // for the same user. Does NOT block audio collection, so the wake word is always
+  // detectable even while Luna is speaking a response.
   if (processingUsers.has(userId)) return;
   processingUsers.add(userId);
 
@@ -297,14 +314,15 @@ async function processUtterance(pcm, userId, connection, channel) {
     if (!transcript) return;
 
     const lower = transcript.toLowerCase().trim();
-    // Check if transcript starts with or contains wake word near the beginning
     const startsWithWake = WAKE_WORDS.some(w => {
       const idx = lower.indexOf(w);
-      return idx !== -1 && idx < 6; // allow up to 5 chars before wake word
+      return idx !== -1 && idx < 6;
     });
     if (!startsWithWake) return;
 
     console.log(`[${userId}] Query:`, transcript);
+    // handleQuery calls interruptPlayback() internally — if Luna is mid-response
+    // she will stop immediately and answer the new query.
     await handleQuery(transcript, connection, channel);
   } catch (err) {
     console.error(`[${userId}] Error processing utterance:`, err);
@@ -379,6 +397,12 @@ async function handleQuery(query, connection, channel) {
     return;
   }
 
+  // Interrupt any ongoing playback — new query takes priority.
+  // interruptPlayback() increments currentGeneration so all queued sentences
+  // from the previous response skip themselves when they reach the front.
+  interruptPlayback();
+  const myGeneration = currentGeneration; // capture for this response's closures
+
   // Fire chime (don't await — let it play while we fetch the LLM response)
   playSound('./chime.mp3', connection).catch(() => {});
   const statusMsg = await channel.send('🤔 *Luna is thinking...*').catch(() => null);
@@ -386,31 +410,16 @@ async function handleQuery(query, connection, channel) {
   console.log(`[LLM] Querying for: ${query}`);
 
   try {
-    // Prefetch pipeline: kick off TTS fetch for sentence N+1 while sentence N plays.
-    // This eliminates the gap between sentences caused by sequential fetch→play→fetch→play.
-    //
-    //  Sentence 1: [fetch TTS]─────[play]
-    //  Sentence 2:         [fetch TTS]─────[play]   ← fetch overlaps with sentence 1 playback
-    //  Sentence 3:                  [fetch TTS]────[play]
-
+    // Prefetch pipeline — fetchTTS fires immediately when LLM yields a sentence,
+    // so Kokoro is generating sentence N+1 while sentence N is playing.
     let firstSentence = true;
-    // Prefetch pipeline — eliminates the gap between sentences:
-    //
-    //  Sentence 1: [LLM yields]→[fetchTTS starts]───────[play]
-    //  Sentence 2: [LLM yields]→[fetchTTS starts]───────[play]  ← fetch overlaps S1 playback
-    //  Sentence 3: [LLM yields]→[fetchTTS starts]───────[play]  ← fetch overlaps S2 playback
-    //
-    // Key: fetchTTS is called immediately when the sentence arrives from the LLM
-    // (not when playback queue reaches it), so Kokoro is generating audio in
-    // parallel with the previous sentence playing.
-
-    // audioPromise for each sentence is started eagerly and stored here
-    // until the playback queue consumes it.
-    const prefetchMap = new Map(); // sentence text → Promise<PassThrough|null>
+    const prefetchMap = new Map();
     let sentenceIndex = 0;
 
     for await (const sentence of getLMStudioResponseStreaming(query)) {
       if (!sentence.trim()) continue;
+      // If a newer query arrived mid-stream, abort fetching remaining sentences
+      if (myGeneration !== currentGeneration) break;
       console.log('Luna sentence:', sentence);
 
       if (firstSentence) {
@@ -423,12 +432,12 @@ async function handleQuery(query, connection, channel) {
       const audioPromise = fetchTTS(sentence);
       prefetchMap.set(idx, audioPromise);
 
-      // Queue play — by the time this executes, fetchTTS has had a head start
+      // Queue play — passes myGeneration so stale sentences auto-skip
       queuePlayback(async () => {
         const passThrough = await prefetchMap.get(idx);
         prefetchMap.delete(idx);
         if (passThrough) await playTTS(passThrough, connection);
-      });
+      }, myGeneration);
     }
 
     // Clean up status message if LLM returned nothing
@@ -441,7 +450,7 @@ async function handleQuery(query, connection, channel) {
     queuePlayback(async () => {
       const pt = await fetchTTS('I had trouble processing that.');
       if (pt) await playTTS(pt, connection);
-    });
+    }, myGeneration);
   }
 }
 
@@ -603,7 +612,7 @@ async function fetchTTS(text) {
     const res = await fetch(KOKORO_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ input: text, voice: KOKORO_VOICE }),
+      body: JSON.stringify({ input: text, voice: KOKORO_VOICE, stream: true }),
     });
 
     if (!res.ok) {
@@ -640,16 +649,18 @@ async function playTTS(passThrough, connection) {
       inputType: StreamType.Arbitrary,
     });
 
+    currentPlayer = player; // track so interruptPlayback() can stop it
     connection.subscribe(player);
     player.play(resource);
 
     await new Promise(resolve => {
-      player.on(AudioPlayerStatus.Idle, () => { player.stop(); resolve(); });
-      player.on('error', err => { console.error('Player error:', err); resolve(); });
-      setTimeout(resolve, 30000); // safety timeout
+      player.on(AudioPlayerStatus.Idle, () => { player.stop(); currentPlayer = null; resolve(); });
+      player.on('error', err => { console.error('Player error:', err); currentPlayer = null; resolve(); });
+      setTimeout(() => { currentPlayer = null; resolve(); }, 30000);
     });
   } catch (err) {
-    console.error('speakResponse error:', err);
+    console.error('playTTS error:', err);
+    currentPlayer = null;
   }
 }
 
