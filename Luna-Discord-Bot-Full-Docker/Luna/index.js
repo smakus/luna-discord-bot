@@ -61,7 +61,7 @@ let lmStudioModel = null;
 async function resolveModel() {
   try {
     const res = await fetch(
-      process.env.LM_STUDIO_URL.replace('/api/v1/chat', '/api/v1/models'),
+      LM_STUDIO_URL.replace('/api/v1/chat', '/api/v1/models'),
       { headers: { 'Authorization': `Bearer ${process.env.LM_STUDIO_MCP_BEARER_TOKEN}` } }
     );
     const data = await res.json();
@@ -263,7 +263,7 @@ function writeWav(filePath, pcmData, sampleRate, channels, bitDepth) {
   header.writeUInt32LE(16, 16);                 // fmt chunk size
   header.writeUInt16LE(1,  20);                 // PCM format
   header.writeUInt16LE(channels, 22);           // num channels
-  header.writeUInt32LE(sampleRate, 24);         // sample rate (was 26 — off by 2!)
+  header.writeUInt32LE(sampleRate, 24);         // sample rate
   header.writeUInt32LE(byteRate, 28);           // byte rate
   header.writeUInt16LE(blockAlign, 32);         // block align
   header.writeUInt16LE(bitDepth, 34);           // bits per sample
@@ -304,12 +304,12 @@ async function processUtterance(pcm, userId, connection, channel) {
   if (processingUsers.has(userId)) return;
   processingUsers.add(userId);
 
-  const wav16Path = `/tmp/discordai_${userId}_${Date.now()}_16k.wav`;
+  const wavPath = `/tmp/discordai_${userId}_${Date.now()}.wav`;
 
   try {
-    writeWav(wav16Path, pcm, 48000, 1, 16);
-    const transcript = await transcribeWithWhisper(wav16Path);
-    try { fs.unlinkSync(wav16Path); } catch (_) {}
+    writeWav(wavPath, pcm, 48000, 1, 16);
+    const transcript = await transcribeWithWhisper(wavPath);
+    try { fs.unlinkSync(wavPath); } catch (_) {}
 
     if (!transcript) return;
 
@@ -326,7 +326,7 @@ async function processUtterance(pcm, userId, connection, channel) {
     await handleQuery(transcript, connection, channel);
   } catch (err) {
     console.error(`[${userId}] Error processing utterance:`, err);
-    try { fs.unlinkSync(wav16Path); } catch (_) {}
+    try { fs.unlinkSync(wavPath); } catch (_) {}
   } finally {
     processingUsers.delete(userId);
   }
@@ -378,7 +378,6 @@ function needsWebSearch(query) {
 
 function extractSmakbotCommand(query) {
   const match = query.match(/play(?:\s+the)?\s+song[,.]?\s*(.+)/i);
-  console.log(`play song regex test on: "${query}" → match: ${match ? match[1] : 'null'}`);
   if (match) return match[1].trim().replace(/[,.]+$/, '');
   return null;
 }
@@ -393,7 +392,10 @@ async function handleQuery(query, connection, channel) {
     await channel.send(`!play ${songRequest}`).catch(err =>
       console.error('Failed to send play music command:', err.message)
     );
-    await queuePlayback(() => speakResponse(`Okay, playing ${songRequest}.`, connection));
+    queuePlayback(async () => {
+      const pt = await fetchTTS(`Okay, playing ${songRequest}.`);
+      if (pt) await playTTS(pt, connection);
+    }, currentGeneration);
     return;
   }
 
